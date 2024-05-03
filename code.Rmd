@@ -1,0 +1,981 @@
+---
+title: "Analysis code for Usability Experiment data"
+output: html_document
+date: "2024-04-26"
+author: Susanna Ankama
+---
+
+```{r}
+
+wd = getwd()
+setwd(wd)
+
+library(readxl)
+
+data <- read_excel("raw_data_final.xlsx")
+
+data$Culture <- as.factor(data$Culture)  
+data$DisplayType <- as.factor(data$DisplayType)  
+data$QueryType <- as.factor(data$QueryType)
+data$GeoportalFrequency <- as.factor(data$GeoportalFrequency)
+data$Age <- as.factor(data$Age)
+
+```
+
+## Data Preparation
+
+```{r}
+
+namibian <- data[data$Culture=="namibian", ]
+german <- data[data$Culture=="german", ]
+
+lb  <- data[data$DisplayType=="LB", ]
+lbm <- data[data$DisplayType=="LBM", ]
+
+st <-  data[data$QueryType=="ST", ]
+stt <- data[data$QueryType=="STT", ]
+
+# load libraries, set the number of resamples to 5000
+library(bootES)
+library(ggplot2)
+library(dplyr) 
+
+N_resamples = 5000
+
+```
+
+## Search Effectiveness - DCG\@3
+```{r}
+# SpatialAnalysis could have possibly affected the ratings
+DCG3Model <- lm (DCG3 ~ DisplayType + Culture + QueryType + BasicComputerSkills + SpatialAnalysis + Webgis 
+                 + WebmapUse + Programming + GeodataSearching + MapMaking + GeoportalFrequency, data = data)
+summary(DCG3Model)
+
+ggplot(data, aes(y = DCG3, x= DisplayType, fill=DisplayType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="DCG3", group.col="DisplayType", contrast= c("LB", "LBM"))
+
+# boxplot(ComplexityRatings ~ Culture, data=data)
+ggplot(data, aes(y = DCG3, x= QueryType, fill=QueryType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="DCG3", group.col="QueryType", contrast= c("ST", "STT"))
+
+# boxplot(ComplexityRatings ~ Culture, data=data)
+ggplot(data, aes(y = DCG3, x= Culture, fill=Culture)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="DCG3", group.col="Culture", contrast= c("namibian", "german"))
+
+# Interaction effects
+boxplot(DCG3 ~ DisplayType * Culture, data = data)
+boxplot(DCG3 ~ QueryType * Culture, data = data)
+boxplot(DCG3 ~ QueryType * DisplayType, data = data)
+
+
+dcg3DC <- lm (DCG3 ~ DisplayType * Culture, data = data)
+dcg3QC <- lm (DCG3 ~ QueryType * Culture, data = data)
+dcg3QD <- lm (DCG3 ~ QueryType * DisplayType, data = data)
+summary(dcg3DC)
+summary(dcg3QC)
+summary(dcg3QD)
+
+# testing interaction more systematically
+#complexityQC_reduced <- lm (DCG3 ~ QueryType + Culture, data = data)
+#anova(complexityQC, complexityQC_reduced)
+
+interaction.plot(x.factor = data$DisplayType, 
+                 trace.factor = data$Culture,  
+                 response = data$DCG3, fun = mean)
+
+# Obtain the mean, with confidence interval values
+# by(data$ComplexityRatings, data$Culture, mean)
+
+bootES(data, R=N_resamples, data.col = "DCG3")
+
+bootES(lb, R=N_resamples, data.col="DCG3")
+bootES(lbm, R=N_resamples, data.col="DCG3")
+
+bootES(st, R=N_resamples, data.col="DCG3")
+bootES(stt, R=N_resamples, data.col="DCG3")
+
+bootES(namibian, R=N_resamples, data.col="DCG3")
+bootES(german, R=N_resamples, data.col="DCG3")
+
+
+
+```
+
+
+## Search Effectiveness - nDCG\@3
+
+```{r}
+# no factor affected the results
+nDCG3Model <- lm (nDCG3 ~ DisplayType + Culture + QueryType + BasicComputerSkills + SpatialAnalysis + Webgis                  + WebmapUse + Programming + GeodataSearching + MapMaking + GeoportalFrequency, data = data)
+summary(nDCG3Model)
+
+ggplot(data, aes(y = nDCG3, x= DisplayType, fill=DisplayType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="nDCG3", group.col="DisplayType", contrast= c("LB", "LBM"))
+
+ggplot(data, aes(y = nDCG3, x= QueryType, fill=QueryType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="nDCG3", group.col="QueryType", contrast= c("ST", "STT"))
+
+ggplot(data, aes(y = nDCG3, x= Culture, fill=Culture)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="nDCG3", group.col="Culture", contrast= c("namibian", "german"))
+
+# Interaction effects
+boxplot(nDCG3 ~ DisplayType * Culture, data = data)
+boxplot(nDCG3 ~ QueryType * Culture, data = data)
+boxplot(nDCG3 ~ QueryType * DisplayType, data = data)
+
+
+ndcg3DC <- lm (nDCG3 ~ DisplayType * Culture, data = data)
+ndcg3QC <- lm (nDCG3 ~ QueryType * Culture, data = data)
+ndcg3QD <- lm (nDCG3 ~ QueryType * DisplayType, data = data)
+summary(ndcg3DC)
+summary(ndcg3QC)
+summary(ndcg3QD)
+
+# testing interaction more systematically
+#complexityQC_reduced <- lm (DCG3 ~ QueryType + Culture, data = data)
+#anova(complexityQC, complexityQC_reduced)
+
+interaction.plot(x.factor = data$DisplayType, 
+                 trace.factor = data$Culture,  
+                 response = data$nDCG3, fun = mean)
+
+# Obtain the mean, with confidence interval values
+
+bootES(data, R=N_resamples, data.col = "nDCG3")
+
+bootES(lb, R=N_resamples, data.col="nDCG3")
+bootES(lbm, R=N_resamples, data.col="nDCG3")
+
+bootES(st, R=N_resamples, data.col="nDCG3")
+bootES(stt, R=N_resamples, data.col="nDCG3")
+
+bootES(namibian, R=N_resamples, data.col="nDCG3")
+bootES(german, R=N_resamples, data.col="nDCG3")
+
+
+```
+
+
+## Search Effectiveness - DCG\@5
+```{r}
+# Culture (and possibley WebMapUse and GeodataSearching skills) have likely affected the results 
+DCG5Model <- lm (DCG5 ~ DisplayType + Culture + QueryType + BasicComputerSkills + SpatialAnalysis + Webgis 
+                 + WebmapUse + Programming + GeodataSearching + MapMaking + GeoportalFrequency, data = data)
+summary(DCG5Model)
+
+ggplot(data, aes(y = DCG5, x= DisplayType, fill=DisplayType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="DCG5", group.col="DisplayType", contrast= c("LB", "LBM"))
+
+ggplot(data, aes(y = DCG5, x= QueryType, fill=QueryType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="DCG5", group.col="QueryType", contrast= c("ST", "STT"))
+
+# boxplot(ComplexityRatings ~ Culture, data=data)
+ggplot(data, aes(y = DCG5, x= Culture, fill=Culture)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="DCG5", group.col="Culture", contrast= c("namibian", "german"))
+
+# Interaction effects
+boxplot(DCG5 ~ DisplayType * Culture, data = data)
+boxplot(DCG5 ~ QueryType * Culture, data = data)
+boxplot(DCG5 ~ QueryType * DisplayType, data = data)
+
+
+dcg5DC <- lm (DCG5 ~ DisplayType * Culture, data = data)
+dcg5QC <- lm (DCG5 ~ QueryType * Culture, data = data)
+dcg5QD <- lm (DCG5 ~ QueryType * DisplayType, data = data)
+summary(dcg5DC)
+summary(dcg5QC)
+summary(dcg5QD)
+
+# testing interaction more systematically
+#complexityQC_reduced <- lm (DCG3 ~ QueryType + Culture, data = data)
+#anova(complexityQC, complexityQC_reduced)
+
+interaction.plot(x.factor = data$DisplayType, 
+                 trace.factor = data$Culture,  
+                 response = data$DCG5, fun = mean)
+
+# Obtain the mean, with confidence interval values
+
+bootES(data, R=N_resamples, data.col = "DCG5")
+
+bootES(lb, R=N_resamples, data.col="DCG5")
+bootES(lbm, R=N_resamples, data.col="DCG5")
+
+bootES(st, R=N_resamples, data.col="DCG5")
+bootES(stt, R=N_resamples, data.col="DCG5")
+
+bootES(namibian, R=N_resamples, data.col="DCG5")
+bootES(german, R=N_resamples, data.col="DCG5")
+
+
+```
+
+
+## Search Effectiveness - nDCG\@5
+```{r}
+# no factor affected the ratings
+nDCG5Model <- lm (nDCG5 ~ DisplayType + Culture + QueryType + BasicComputerSkills + SpatialAnalysis + Webgis
+                 + WebmapUse + Programming + GeodataSearching + MapMaking + GeoportalFrequency, data = data)
+summary(nDCG5Model)
+
+ggplot(data, aes(y = nDCG5, x= DisplayType, fill=DisplayType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="nDCG5", group.col="DisplayType", contrast= c("LB", "LBM"))
+
+ggplot(data, aes(y = nDCG3, x= QueryType, fill=QueryType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="nDCG5", group.col="QueryType", contrast= c("ST", "STT"))
+
+ggplot(data, aes(y = nDCG3, x= Culture, fill=Culture)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="nDCG5", group.col="Culture", contrast= c("namibian", "german"))
+
+# Interaction effects
+boxplot(nDCG5 ~ DisplayType * Culture, data = data)
+boxplot(nDCG5 ~ QueryType * Culture, data = data)
+boxplot(nDCG5 ~ QueryType * DisplayType, data = data)
+
+
+ndcg5DC <- lm (nDCG5 ~ DisplayType * Culture, data = data)
+ndcg5QC <- lm (nDCG5 ~ QueryType * Culture, data = data)
+ndcg5QD <- lm (nDCG5 ~ QueryType * DisplayType, data = data)
+summary(ndcg5DC)
+summary(ndcg5QC)
+summary(ndcg5QD)
+
+# testing interaction more systematically
+#complexityQC_reduced <- lm (DCG3 ~ QueryType + Culture, data = data)
+#anova(complexityQC, complexityQC_reduced)
+
+interaction.plot(x.factor = data$DisplayType, 
+                 trace.factor = data$Culture,  
+                 response = data$nDCG5, fun = mean)
+
+# Obtain the mean, with confidence interval values
+
+bootES(data, R=N_resamples, data.col = "nDCG5")
+
+bootES(lb, R=N_resamples, data.col="nDCG5")
+bootES(lbm, R=N_resamples, data.col="nDCG5")
+
+bootES(st, R=N_resamples, data.col="nDCG5")
+bootES(stt, R=N_resamples, data.col="nDCG5")
+
+bootES(namibian, R=N_resamples, data.col="nDCG5")
+bootES(german, R=N_resamples, data.col="nDCG5")
+
+
+```
+
+
+## UI Complexity
+
+```{r}
+
+### Culture and MapMaking skills could have possibly affected the ratings
+# https://stats.stackexchange.com/questions/160026/why-does-an-insignificant-regressor-become-significant-if-i-add-some-significant
+ComplexityModel <- lm (ComplexityRatings ~ DisplayType + Culture + QueryType 
+                  + BasicComputerSkills + SpatialAnalysis + Webgis + WebmapUse + Programming 
+                  + GeodataSearching + MapMaking + GeoportalFrequency, data = data)
+summary(ComplexityModel)
+
+
+#boxplot(ComplexityRatings ~ DisplayType, data=data)
+ggplot(data, aes(y = ComplexityRatings, x= DisplayType, fill=DisplayType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="ComplexityRatings", group.col="DisplayType", contrast= c("LB", "LBM"))
+
+# boxplot(ComplexityRatings ~ Culture, data=data)
+ggplot(data, aes(y = ComplexityRatings, x= QueryType, fill=QueryType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="ComplexityRatings", group.col="QueryType", contrast= c("ST", "STT"))
+
+# boxplot(ComplexityRatings ~ Culture, data=data)
+ggplot(data, aes(y = ComplexityRatings, x= Culture, fill=Culture)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="ComplexityRatings", group.col="Culture", contrast= c("namibian", "german"))
+
+# Interaction effects
+boxplot(ComplexityRatings ~ DisplayType * Culture, data = data)
+boxplot(ComplexityRatings ~ QueryType * Culture, data = data)
+boxplot(ComplexityRatings ~ QueryType * DisplayType, data = data)
+
+
+complexityDC <- lm (ComplexityRatings ~ DisplayType * Culture, data = data)
+complexityQC <- lm (ComplexityRatings ~ QueryType * Culture, data = data)
+complexityQD <- lm (ComplexityRatings ~ QueryType * DisplayType, data = data)
+summary(complexityDC)
+summary(complexityQC)
+summary(complexityQD)
+
+# testing interaction more systematically
+complexityQC_reduced <- lm (ComplexityRatings ~ QueryType + Culture, data = data)
+anova(complexityQC, complexityQC_reduced)
+
+interaction.plot(x.factor = data$DisplayType, 
+                 trace.factor = data$Culture,  
+                 response = data$ComplexityRatings, fun = mean)
+
+# Obtain the mean, with confidence interval values
+bootES(data, R=N_resamples, data.col="ComplexityRatings")
+
+bootES(lb, R=N_resamples, data.col="ComplexityRatings")
+bootES(lbm, R=N_resamples, data.col="ComplexityRatings")
+
+bootES(st, R=N_resamples, data.col="ComplexityRatings")
+bootES(stt, R=N_resamples, data.col="ComplexityRatings")
+
+bootES(namibian, R=N_resamples, data.col="ComplexityRatings")
+bootES(german, R=N_resamples, data.col="ComplexityRatings")
+
+
+```
+
+## User Experience - SupportiveObstructive
+
+```{r}
+
+# No factor affected the ratings
+SupportiveObstructiveModel <- lm (SupportiveObstructive ~ DisplayType + Culture + QueryType 
+                  + BasicComputerSkills + SpatialAnalysis + Webgis + WebmapUse + Programming 
+                  + GeodataSearching + MapMaking + GeoportalFrequency, data = data)
+summary(SupportiveObstructiveModel)
+
+
+ggplot(data, aes(y = SupportiveObstructive, x= DisplayType, fill=DisplayType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="SupportiveObstructive", group.col="DisplayType", contrast= c("LB", "LBM"))
+
+ggplot(data, aes(y = SupportiveObstructive, x= QueryType, fill=QueryType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="SupportiveObstructive", group.col="QueryType", contrast= c("ST", "STT"))
+
+ggplot(data, aes(y = SupportiveObstructive, x= Culture, fill=Culture)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="SupportiveObstructive", group.col="Culture", contrast= c("namibian", "german"))
+
+# Interaction effects
+boxplot(SupportiveObstructive ~ DisplayType * Culture, data = data)
+boxplot(SupportiveObstructive ~ QueryType * Culture, data = data)
+boxplot(SupportiveObstructive ~ QueryType * DisplayType, data = data)
+
+
+supportiveDC <- lm (SupportiveObstructive ~ DisplayType * Culture, data = data)
+supportiveQC <- lm (SupportiveObstructive ~ QueryType * Culture, data = data)
+supportiveQD <- lm (SupportiveObstructive ~ QueryType * DisplayType, data = data)
+summary(supportiveDC)
+summary(supportiveQC)
+summary(supportiveQD)
+
+# testing interaction more systematically
+supportiveDC_reduced <- lm (SupportiveObstructive ~ DisplayType + Culture, data = data)
+anova(supportiveDC, supportiveDC_reduced)
+
+# interaction plot (simple)
+interaction.plot(x.factor = data$DisplayType, 
+                 trace.factor = data$Culture,  
+                 response = data$SupportiveObstructive, fun = mean)
+
+# interaction plot in ggplot2
+# https://sebastiansauer.github.io/vis_interaction_effects/
+data %>% 
+  group_by(DisplayType, Culture) %>% 
+  summarise(rating_groups = mean(SupportiveObstructive)) -> ratings2
+
+ratings2 %>% 
+  ggplot() +
+  aes(x = DisplayType, y = rating_groups, color = Culture) +
+  geom_line(aes(group = Culture)) +
+  geom_point() + labs(y= "Mean of SupportiveObstructive Ratings")
+
+# Obtain the mean, with confidence interval values
+
+bootES(data, R=N_resamples, data.col="SupportiveObstructive")
+
+bootES(lb, R=N_resamples, data.col="SupportiveObstructive")
+bootES(lbm, R=N_resamples, data.col="SupportiveObstructive")
+
+bootES(st, R=N_resamples, data.col="SupportiveObstructive")
+bootES(stt, R=N_resamples, data.col="SupportiveObstructive")
+
+bootES(namibian, R=N_resamples, data.col="SupportiveObstructive")
+bootES(german, R=N_resamples, data.col="SupportiveObstructive")
+
+
+```
+
+## User Experience - EasyComplicated
+
+```{r}
+
+# Geodatasearching could have possibly affected the ratings
+EasyComplicatedModel <- lm (EasyComplicated ~ DisplayType + Culture + QueryType 
+                  + BasicComputerSkills + SpatialAnalysis + Webgis + WebmapUse + Programming 
+                  + GeodataSearching + MapMaking + GeoportalFrequency, data = data)
+summary(EasyComplicatedModel)
+
+ggplot(data, aes(y = EasyComplicated, x= DisplayType, fill=DisplayType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="EasyComplicated", group.col="DisplayType", contrast= c("LB", "LBM"))
+
+ggplot(data, aes(y = EasyComplicated, x= QueryType, fill=QueryType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="EasyComplicated", group.col="QueryType", contrast= c("ST", "STT"))
+
+ggplot(data, aes(y = EasyComplicated, x= Culture, fill=Culture)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="EasyComplicated", group.col="Culture", contrast= c("namibian", "german"))
+
+# Interaction effects
+boxplot(EasyComplicated ~ DisplayType * Culture, data = data)
+boxplot(EasyComplicated ~ QueryType * Culture, data = data)
+boxplot(EasyComplicated ~ QueryType * DisplayType, data = data)
+
+
+easyDC <- lm (EasyComplicated ~ DisplayType * Culture, data = data)
+easyQC <- lm (EasyComplicated ~ QueryType * Culture, data = data)
+easyQD <- lm (EasyComplicated ~ QueryType * DisplayType, data = data)
+summary(easyDC)
+summary(easyQC)
+summary(easyQD)
+
+# testing interaction more systematically
+easyQC_reduced <- lm (EasyComplicated ~ QueryType + Culture, data = data)
+anova(easyQC, easyQC_reduced)
+
+# interaction plot (simple)
+interaction.plot(x.factor = data$QueryType, 
+                 trace.factor = data$Culture,  
+                 response = data$EasyComplicated, fun = mean)
+
+# interaction plot in ggplot2
+# https://sebastiansauer.github.io/vis_interaction_effects/
+data %>% 
+  group_by(QueryType, Culture) %>% 
+  summarise(rating_groups = mean(EasyComplicated)) -> ratings2
+
+ratings2 %>% 
+  ggplot() +
+  aes(x = QueryType, y = rating_groups, color = Culture) +
+  geom_line(aes(group = Culture)) +
+  geom_point() + labs(y= "Mean of EasyComplicated Ratings")
+
+bootES(data, R=N_resamples, data.col="EasyComplicated")
+
+# Obtain the mean, with confidence interval values
+bootES(lb, R=N_resamples, data.col="EasyComplicated")
+bootES(lbm, R=N_resamples, data.col="EasyComplicated")
+
+bootES(st, R=N_resamples, data.col="EasyComplicated")
+bootES(stt, R=N_resamples, data.col="EasyComplicated")
+
+bootES(namibian, R=N_resamples, data.col="EasyComplicated")
+bootES(german, R=N_resamples, data.col="EasyComplicated")
+
+```
+
+## User Experience - EfficientInefficient
+
+```{r}
+
+# no factor affected the ratings
+EfficientInefficientModel <- lm (EfficientInefficient ~ DisplayType + Culture + QueryType 
+                  + BasicComputerSkills + SpatialAnalysis + Webgis + WebmapUse + Programming 
+                  + GeodataSearching + MapMaking + GeoportalFrequency, data = data)
+summary(EfficientInefficientModel)
+
+ggplot(data, aes(y = EfficientInefficient, x= DisplayType, fill=DisplayType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="EfficientInefficient", group.col="DisplayType", contrast= c("LB", "LBM"))
+
+ggplot(data, aes(y = EfficientInefficient, x= QueryType, fill=QueryType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="EfficientInefficient", group.col="QueryType", contrast= c("ST", "STT"))
+
+ggplot(data, aes(y = EfficientInefficient, x= Culture, fill=Culture)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="EfficientInefficient", group.col="Culture", contrast= c("namibian", "german"))
+
+# Interaction effects
+boxplot(EfficientInefficient ~ DisplayType * Culture, data = data)
+boxplot(EfficientInefficient ~ QueryType * Culture, data = data)
+boxplot(EfficientInefficient ~ QueryType * DisplayType, data = data)
+
+
+efficientDC <- lm (EfficientInefficient ~ DisplayType * Culture, data = data)
+efficientQC <- lm (EfficientInefficient ~ QueryType * Culture, data = data)
+efficientQD <- lm (EfficientInefficient ~ QueryType * DisplayType, data = data)
+summary(efficientDC)
+summary(efficientQC)
+summary(efficientQD)
+
+# testing interaction more systematically
+#easyQC_reduced <- lm (EfficientInefficient ~ QueryType + Culture, data = data)
+#anova(easyQC, easyQC_reduced)
+
+# interaction plot (simple)
+#interaction.plot(x.factor = data$QueryType, 
+#                 trace.factor = data$Culture,  
+#                 response = data$EfficientInefficient, fun = mean)
+
+# interaction plot in ggplot2
+# https://sebastiansauer.github.io/vis_interaction_effects/
+data %>% 
+  group_by(QueryType, Culture) %>% 
+  summarise(rating_groups = mean(EfficientInefficient)) -> ratings2
+
+ratings2 %>% 
+  ggplot() +
+  aes(x = QueryType, y = rating_groups, color = Culture) +
+  geom_line(aes(group = Culture)) +
+  geom_point() + labs(y= "Mean of EfficientInefficient Ratings")
+
+# Obtain the mean, with confidence interval values
+
+bootES(data, R=N_resamples, data.col="EfficientInefficient")
+
+bootES(lb, R=N_resamples, data.col="EfficientInefficient")
+bootES(lbm, R=N_resamples, data.col="EfficientInefficient")
+
+bootES(st, R=N_resamples, data.col="EfficientInefficient")
+bootES(stt, R=N_resamples, data.col="EfficientInefficient")
+
+bootES(namibian, R=N_resamples, data.col="EfficientInefficient")
+bootES(german, R=N_resamples, data.col="EfficientInefficient")
+
+
+```
+
+## User Experience - ClearConfusing
+
+```{r}
+# MapMaking could have possibly affected the ratings
+ClearConfusingModel <- lm (ClearConfusing ~ DisplayType + Culture + QueryType 
+                  + BasicComputerSkills + SpatialAnalysis + Webgis + WebmapUse + Programming 
+                  + GeodataSearching + MapMaking + GeoportalFrequency, data = data)
+summary(ClearConfusingModel)
+
+ggplot(data, aes(y = ClearConfusing, x= DisplayType, fill=DisplayType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="ClearConfusing", group.col="DisplayType", contrast= c("LB", "LBM"))
+
+ggplot(data, aes(y = ClearConfusing, x= QueryType, fill=QueryType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="ClearConfusing", group.col="QueryType", contrast= c("ST", "STT"))
+
+ggplot(data, aes(y = ClearConfusing, x= Culture, fill=Culture)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="ClearConfusing", group.col="Culture", contrast= c("namibian", "german"))
+
+# Interaction effects
+boxplot(ClearConfusing ~ DisplayType * Culture, data = data)
+boxplot(ClearConfusing ~ QueryType * Culture, data = data)
+boxplot(ClearConfusing ~ QueryType * DisplayType, data = data)
+
+
+clearDC <- lm (ClearConfusing ~ DisplayType * Culture, data = data)
+clearQC <- lm (ClearConfusing ~ QueryType * Culture, data = data)
+clearQD <- lm (ClearConfusing ~ QueryType * DisplayType, data = data)
+summary(clearDC)
+summary(clearQC)
+summary(clearQD)
+
+# testing interaction more systematically
+#easyQC_reduced <- lm (EfficientInefficient ~ QueryType + Culture, data = data)
+#anova(easyQC, easyQC_reduced)
+
+# interaction plot (simple)
+#interaction.plot(x.factor = data$QueryType, 
+#                 trace.factor = data$Culture,  
+#                 response = data$EfficientInefficient, fun = mean)
+
+# interaction plot in ggplot2
+# https://sebastiansauer.github.io/vis_interaction_effects/
+data %>% 
+  group_by(QueryType, Culture) %>% 
+  summarise(rating_groups = mean(ClearConfusing)) -> ratings2
+
+ratings2 %>% 
+  ggplot() +
+  aes(x = QueryType, y = rating_groups, color = Culture) +
+  geom_line(aes(group = Culture)) +
+  geom_point() + labs(y= "Mean of ClearConfusing Ratings")
+
+# Obtain the mean, with confidence interval values
+
+bootES(data, R=N_resamples, data.col="ClearConfusing")
+
+bootES(lb, R=N_resamples, data.col="ClearConfusing")
+bootES(lbm, R=N_resamples, data.col="ClearConfusing")
+
+bootES(st, R=N_resamples, data.col="ClearConfusing")
+bootES(stt, R=N_resamples, data.col="ClearConfusing")
+
+bootES(namibian, R=N_resamples, data.col="ClearConfusing")
+bootES(german, R=N_resamples, data.col="ClearConfusing")
+```
+
+## User Experience - ExcitingBoring
+
+```{r}
+# ExcitingBoring could have possibly affected the ratings
+ExcitingBoringModel <- lm (ExcitingBoring ~ DisplayType + Culture + QueryType 
+                  + BasicComputerSkills + SpatialAnalysis + Webgis + WebmapUse + Programming 
+                  + GeodataSearching + MapMaking + GeoportalFrequency, data = data)
+summary(ExcitingBoringModel)
+
+ggplot(data, aes(y = ExcitingBoring, x= DisplayType, fill=DisplayType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="ExcitingBoring", group.col="DisplayType", contrast= c("LB", "LBM"))
+
+ggplot(data, aes(y = ExcitingBoring, x= QueryType, fill=QueryType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="ExcitingBoring", group.col="QueryType", contrast= c("ST", "STT"))
+
+ggplot(data, aes(y = ExcitingBoring, x= Culture, fill=Culture)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="ExcitingBoring", group.col="Culture", contrast= c("namibian", "german"))
+
+# Interaction effects
+boxplot(ExcitingBoring ~ DisplayType * Culture, data = data)
+boxplot(ExcitingBoring ~ QueryType * Culture, data = data)
+boxplot(ExcitingBoring ~ QueryType * DisplayType, data = data)
+
+
+boringDC <- lm (ExcitingBoring ~ DisplayType * Culture, data = data)
+boringQC <- lm (ExcitingBoring ~ QueryType * Culture, data = data)
+boringQD <- lm (ExcitingBoring ~ QueryType * DisplayType, data = data)
+summary(boringDC)
+summary(boringQC)
+summary(boringQD)
+
+# testing interaction more systematically
+#easyQC_reduced <- lm (EfficientInefficient ~ QueryType + Culture, data = data)
+#anova(easyQC, easyQC_reduced)
+
+# interaction plot (simple)
+#interaction.plot(x.factor = data$QueryType, 
+#                 trace.factor = data$Culture,  
+#                 response = data$EfficientInefficient, fun = mean)
+
+# interaction plot in ggplot2
+# https://sebastiansauer.github.io/vis_interaction_effects/
+# data %>% 
+#   group_by(QueryType, Culture) %>% 
+#   summarise(rating_groups = mean(ExcitingBoring)) -> ratings2
+# 
+# ratings2 %>% 
+#   ggplot() +
+#   aes(x = QueryType, y = rating_groups, color = Culture) +
+#   geom_line(aes(group = Culture)) +
+#   geom_point() + labs(y= "Mean of ExcitingBoring Ratings")
+
+# Obtain the mean, with confidence interval values
+
+bootES(data, R=N_resamples, data.col="ExcitingBoring")
+
+
+bootES(lb, R=N_resamples, data.col="ExcitingBoring")
+bootES(lbm, R=N_resamples, data.col="ExcitingBoring")
+
+bootES(st, R=N_resamples, data.col="ExcitingBoring")
+bootES(stt, R=N_resamples, data.col="ExcitingBoring")
+
+bootES(namibian, R=N_resamples, data.col="ExcitingBoring")
+bootES(german, R=N_resamples, data.col="ExcitingBoring")
+
+```
+
+## User Experience - InterestingNotinteresting
+
+```{r}
+
+# No factor affected the ratings
+InterestingNotinterestingModel <- lm (InterestingNotinteresting ~ DisplayType + Culture + QueryType 
+                  + BasicComputerSkills + SpatialAnalysis + Webgis + WebmapUse + Programming 
+                  + GeodataSearching + MapMaking + GeoportalFrequency, data = data)
+summary(InterestingNotinterestingModel)
+
+
+ggplot(data, aes(y = InterestingNotinteresting, x= DisplayType, fill=DisplayType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="InterestingNotinteresting", group.col="DisplayType", contrast= c("LB", "LBM"))
+
+ggplot(data, aes(y = InterestingNotinteresting, x= QueryType, fill=QueryType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="InterestingNotinteresting", group.col="QueryType", contrast= c("ST", "STT"))
+
+ggplot(data, aes(y = InterestingNotinteresting, x= Culture, fill=Culture)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="InterestingNotinteresting", group.col="Culture", contrast= c("namibian", "german"))
+
+# Interaction effects
+boxplot(InterestingNotinteresting ~ DisplayType * Culture, data = data)
+boxplot(InterestingNotinteresting ~ QueryType * Culture, data = data)
+boxplot(InterestingNotinteresting ~ QueryType * DisplayType, data = data)
+
+
+interestingDC <- lm (InterestingNotinteresting ~ DisplayType * Culture, data = data)
+interestingQC <- lm (InterestingNotinteresting ~ QueryType * Culture, data = data)
+interestingQD <- lm (InterestingNotinteresting ~ QueryType * DisplayType, data = data)
+summary(interestingDC)
+summary(interestingQC)
+summary(interestingQD)
+
+# testing interaction more systematically
+interestingDC_reduced <- lm (InterestingNotinteresting ~ QueryType + Culture, data = data)
+anova(interestingDC, interestingDC_reduced)
+
+#interaction plot (simple)
+interaction.plot(x.factor = data$DisplayType,
+                trace.factor = data$Culture,
+                response = data$InterestingNotinteresting, fun = mean)
+
+# interaction plot in ggplot2
+# https://sebastiansauer.github.io/vis_interaction_effects/
+#data %>% 
+#   group_by(DisplayType, Culture) %>% 
+#   summarise(rating_groups = mean(InterestingNotinteresting)) -> ratings2
+# 
+# ratings2 %>% 
+#   ggplot() +
+#   aes(x = DisplayType, y = rating_groups, color = Culture) +
+#   geom_line(aes(group = Culture)) +
+#   geom_point() + labs(y= "Mean of InterestingNotinteresting Ratings")
+
+# Obtain the mean, with confidence interval values
+
+bootES(data, R=N_resamples, data.col="InterestingNotinteresting")
+
+bootES(lb, R=N_resamples, data.col="InterestingNotinteresting")
+bootES(lbm, R=N_resamples, data.col="InterestingNotinteresting")
+
+bootES(st, R=N_resamples, data.col="InterestingNotinteresting")
+bootES(stt, R=N_resamples, data.col="InterestingNotinteresting")
+
+bootES(namibian, R=N_resamples, data.col="InterestingNotinteresting")
+bootES(german, R=N_resamples, data.col="InterestingNotinteresting")
+
+
+```
+
+## User Experience - InventiveConventional
+
+```{r}
+
+# No factor affected the ratings
+InventiveConventionalModel <- lm (InventiveConventional ~ DisplayType + Culture + QueryType + BasicComputerSkills + SpatialAnalysis + Webgis + WebmapUse + Programming           + GeodataSearching + MapMaking + GeoportalFrequency, data = data)
+summary(InventiveConventionalModel)
+
+
+ggplot(data, aes(y = InventiveConventional, x= DisplayType, fill=DisplayType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="InventiveConventional", group.col="DisplayType", contrast= c("LB", "LBM"))
+
+ggplot(data, aes(y = InventiveConventional, x= QueryType, fill=QueryType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="InventiveConventional", group.col="QueryType", contrast= c("ST", "STT"))
+
+ggplot(data, aes(y = InventiveConventional, x= Culture, fill=Culture)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="InventiveConventional", group.col="Culture", contrast= c("namibian", "german"))
+
+# Interaction effects
+boxplot(InventiveConventional ~ DisplayType * Culture, data = data)
+boxplot(InventiveConventional ~ QueryType * Culture, data = data)
+boxplot(InventiveConventional ~ QueryType * DisplayType, data = data)
+
+
+inventiveDC <- lm (InventiveConventional ~ DisplayType * Culture, data = data)
+inventiveQC <- lm (InventiveConventional ~ QueryType * Culture, data = data)
+inventiveQD <- lm (InventiveConventional ~ QueryType * DisplayType, data = data)
+summary(inventiveDC)
+summary(inventiveQC)
+summary(inventiveQD)
+
+# testing interaction more systematically
+#interestingDC_reduced <- lm (InterestingNotinteresting ~ QueryType + Culture, data = data)
+#anova(interestingDC, interestingDC_reduced)
+
+#interaction plot (simple)
+interaction.plot(x.factor = data$DisplayType,
+                trace.factor = data$Culture,
+                response = data$InventiveConventional, fun = mean)
+
+# interaction plot in ggplot2
+# https://sebastiansauer.github.io/vis_interaction_effects/
+#data %>% 
+#   group_by(DisplayType, Culture) %>% 
+#   summarise(rating_groups = mean(InterestingNotinteresting)) -> ratings2
+# 
+# ratings2 %>% 
+#   ggplot() +
+#   aes(x = DisplayType, y = rating_groups, color = Culture) +
+#   geom_line(aes(group = Culture)) +
+#   geom_point() + labs(y= "Mean of InterestingNotinteresting Ratings")
+
+# Obtain the mean, with confidence interval values
+
+bootES(data, R=N_resamples, data.col="InventiveConventional")
+
+bootES(lb, R=N_resamples, data.col="InventiveConventional")
+bootES(lbm, R=N_resamples, data.col="InventiveConventional")
+
+bootES(st, R=N_resamples, data.col="InventiveConventional")
+bootES(stt, R=N_resamples, data.col="InventiveConventional")
+
+bootES(namibian, R=N_resamples, data.col="InventiveConventional")
+bootES(german, R=N_resamples, data.col="InventiveConventional")
+
+
+```
+
+## User Experience - LeadingEdgeStandard
+
+```{r}
+# Culture (and Geodatasearching, QueryType) affected the ratings
+LeadingedgeStandardModel <- lm (LeadingedgeStandard ~ DisplayType + Culture + QueryType 
+                  + BasicComputerSkills + SpatialAnalysis + Webgis + WebmapUse + Programming 
+                  + GeodataSearching + MapMaking + GeoportalFrequency, data = data)
+summary(LeadingedgeStandardModel)
+
+ggplot(data, aes(y = LeadingedgeStandard, x= DisplayType, fill=DisplayType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="LeadingedgeStandard", group.col="DisplayType", contrast= c("LB", "LBM"))
+
+ggplot(data, aes(y = LeadingedgeStandard, x= QueryType, fill=QueryType)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="LeadingedgeStandard", group.col="QueryType", contrast= c("ST", "STT"))
+
+ggplot(data, aes(y = LeadingedgeStandard, x= Culture, fill=Culture)) +
+  geom_boxplot() +  scale_fill_manual(values = c("#94d0f2", "#edd882"))
+bootES(data, R=N_resamples, data.col="LeadingedgeStandard", group.col="Culture", contrast= c("namibian", "german"))
+
+# Interaction effects
+boxplot(LeadingedgeStandard ~ DisplayType * Culture, data = data)
+boxplot(LeadingedgeStandard ~ QueryType * Culture, data = data)
+boxplot(LeadingedgeStandard ~ QueryType * DisplayType, data = data)
+
+
+leadingedgeDC <- lm (LeadingedgeStandard ~ DisplayType * Culture, data = data)
+leadingedgeQC <- lm (LeadingedgeStandard ~ QueryType * Culture, data = data)
+leadingedgeQD <- lm (LeadingedgeStandard ~ QueryType * DisplayType, data = data)
+summary(leadingedgeDC)
+summary(leadingedgeQC)
+summary(leadingedgeQD)
+
+# testing interaction more systematically (Q)
+leadingedgeQD_reduced <- lm (LeadingedgeStandard ~ QueryType + DisplayType, data = data)
+anova(leadingedgeQD, leadingedgeQD_reduced)
+
+#interaction plot (simple)
+interaction.plot(x.factor = data$DisplayType,
+                trace.factor = data$QueryType,
+                response = data$LeadingedgeStandard, fun = mean)
+
+# interaction plot in ggplot2
+# https://sebastiansauer.github.io/vis_interaction_effects/
+data %>%
+  group_by(DisplayType, QueryType) %>%
+  summarise(rating_groups = mean(InterestingNotinteresting)) -> ratings2
+
+ratings2 %>%
+  ggplot() +
+  aes(x = DisplayType, y = rating_groups, color = QueryType) +
+  geom_line(aes(group = QueryType)) +
+  geom_point() + labs(y= "Mean of LeadingedgeStandard Ratings")
+
+# Obtain the mean, with confidence interval values
+
+bootES(data, R=N_resamples, data.col="LeadingedgeStandard")
+
+
+bootES(lb, R=N_resamples, data.col="LeadingedgeStandard")
+bootES(lbm, R=N_resamples, data.col="LeadingedgeStandard")
+
+bootES(st, R=N_resamples, data.col="LeadingedgeStandard")
+bootES(stt, R=N_resamples, data.col="LeadingedgeStandard")
+
+bootES(namibian, R=N_resamples, data.col="LeadingedgeStandard")
+bootES(german, R=N_resamples, data.col="LeadingedgeStandard")
+
+```
+
+## Tests of significance for background Variables
+
+```{r}
+
+library(Hmisc)
+
+# ComplexityRatings ~  MapMaking => no
+ComplexityVSmapmaking <- lm(formula = ComplexityRatings ~  MapMaking, data = data)
+summary(ComplexityVSmapmaking)
+
+# EasyComplicated ~ GeodataSearching => no 
+EasyVSsearching <- lm(formula = EasyComplicated ~ GeodataSearching, data = data)
+summary(EasyVSsearching)
+
+# ClearConfusing ~ MapMaking => no
+ClearVSmapmaking <- lm (ClearConfusing ~ MapMaking, data = data)
+summary(ClearVSmapmaking)
+
+# ExcitingBoring ~ GeodataSearching => no
+ExcitingVSsearching <- lm (ExcitingBoring ~ GeodataSearching, data = data)
+summary(ExcitingVSsearching)
+
+# LeadingedgeStandard ~ GeodataSearching => no
+LeadingVSsearching <- lm (LeadingedgeStandard ~ GeodataSearching, data = data)
+summary(LeadingVSsearching)
+
+# LeadingedgeStandard ~ QueryType => no
+LeadingVSquery <- lm (LeadingedgeStandard ~ QueryType, data = data)
+summary(LeadingVSquery)
+
+# DCG3 ~ SpatialAnalysis => no
+dcg3VSspatialanalysis <- lm(formula = DCG3 ~ SpatialAnalysis, data = data)
+summary(dcg3VSspatialanalysis)
+
+# DCG5 vs WebmapUse => no
+dcg5VSwebmapuse <- lm(formula = DCG5 ~ WebmapUse, data = data)
+summary(dcg5VSwebmapuse)
+
+# DCG5 ~ GeodataSearching => no
+dcg5VSsearching <- lm(formula = DCG5 ~ GeodataSearching, data = data)
+summary(dcg5VSsearching)
+
+# ComplexityRatings ~  WebmapUse => yes
+complexityVSwebmapuse <- lm(formula = ComplexityRatings ~  WebmapUse, data = data)
+summary(complexityVSwebmapuse)
+
+```
+
+## ComplexityRatings VS Webmapuse Skills
+
+```{r}
+
+library(Hmisc)
+
+data$WMU <- as.factor(data$WebmapUse)
+boxplot(ComplexityRatings ~ WMU, data=data)
+
+summary(lm(formula = ComplexityRatings ~  WMU, data = data))
+
+ggplot(data, aes(y = ComplexityRatings, x= WMU, fill=WMU)) +
+  geom_boxplot() + labs(x= "Web map use skills (WMU)")
+
+example <- subset(data, select = c("ComplexityRatings", "WebmapUse"))
+corr_matrix <- rcorr(as.matrix(example), type = "pearson")
+print(corr_matrix)
+
+```
+
+
